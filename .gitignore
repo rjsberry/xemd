@@ -1,0 +1,12 @@
+# Python
+**/*.pyc
+
+# Building
+build/
+tmp/
+xemd.egg-info/
+*.so
+
+# Development
+.venv/
+.vscode/

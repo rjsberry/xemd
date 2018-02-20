@@ -1,0 +1,15 @@
+[submodule "xemd/core/depends/xtensor"]
+	path = xemd/core/depends/xtensor
+	url = https://github.com/QuantStack/xtensor.git
+[submodule "xemd/core/depends/pybind11"]
+	path = xemd/core/depends/pybind11
+	url = https://github.com/pybind/pybind11
+[submodule "xemd/core/depends/xtl"]
+	path = xemd/core/depends/xtl
+	url = https://github.com/QuantStack/xtl
+[submodule "xemd/core/depends/xtensor-python"]
+	path = xemd/core/depends/xtensor-python
+	url = https://github.com/QuantStack/xtensor-python.git
+[submodule "xemd/core/depends/numpy"]
+	path = xemd/core/depends/numpy
+	url = https://github.com/numpy/numpy
