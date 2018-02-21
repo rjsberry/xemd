@@ -8,11 +8,12 @@ __version__ = '0.1.1'
 
 
 class get_pybind_include(object):
-    """Helper class to determine the pybind11 include path
+    """Helper class to determine the pybind11 include path.
 
     The purpose of this class is to postpone importing pybind11
     until it is actually installed, so that the ``get_include()``
-    method can be invoked. """
+    method can be invoked.
+    """
 
     def __init__(self, user=False):
         self.user = user
@@ -23,11 +24,12 @@ class get_pybind_include(object):
 
 
 class get_numpy_include(object):
-    """Helper class to determine the numpy include path
+    """Helper class to determine the numpy include path.
 
     The purpose of this class is to postpone importing numpy
     until it is actually installed, so that the ``get_include()``
-    method can be invoked. """
+    method can be invoked.
+    """
 
     def __init__(self):
         pass
@@ -37,10 +39,16 @@ class get_numpy_include(object):
         return np.get_include()
 
 
-ext_modules = [
+XEMD_SRC_DIRECTORY = 'xemd/core/src'
+
+XEMD_CXX_SOURCES = [os.path.join(XEMD_SRC_DIRECTORY, file_) for file_ in [
+    'core.cpp', 'xceemdan.cpp', 'xeemd.cpp', 'xemd.cpp'
+]]
+
+EXT_MODULES = [
     Extension(
         'xemd_core',
-        ['xemd/core/src/xemd.cpp'],
+        XEMD_CXX_SOURCES,
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
@@ -48,7 +56,7 @@ ext_modules = [
             get_numpy_include(),
             os.path.join(sys.prefix, 'include'),
             os.path.join(sys.prefix, 'Library', 'include'),
-            # TODO: Something a bit smarter for x* includes...
+            # TODO: Something a bit smarter for xtensor includes...
             "xemd/core/depends/xtensor/include",
             "xemd/core/depends/xtensor-python/include",
             "xemd/core/depends/xtl/include"
@@ -83,7 +91,8 @@ def cpp_flag(compiler):
 
 
 class BuildExt(build_ext):
-    """A custom build extension for adding compiler-specific options."""
+    """A custom build extension for adding compiler-specific options.
+    """
     c_opts = {
         'msvc': ['/EHsc'],
         'unix': [],
@@ -106,16 +115,18 @@ class BuildExt(build_ext):
             ext.extra_compile_args = opts
         build_ext.build_extensions(self)
 
-setup(
-    name='xemd',
-    version=__version__,
-    author='Richard Berry',
-    author_email='rjsberry@protonmail.com',
-    url='https://github.com/rjsberry/xemd',
-    description= '',
-    long_description='',
-    ext_modules=ext_modules,
-    install_requires=['pybind11>=2.0.1', 'numpy'],
-    cmdclass={'build_ext': BuildExt},
-    zip_safe=False,
-)
+
+if __name__ == '__main__':
+    setup(
+        name='xemd',
+        version=__version__,
+        author='Richard Berry',
+        author_email='rjsberry@protonmail.com',
+        url='https://github.com/rjsberry/xemd',
+        description= '',
+        long_description='',
+        ext_modules=EXT_MODULES,
+        install_requires=['pybind11>=2.0.1', 'numpy'],
+        cmdclass={'build_ext': BuildExt},
+        zip_safe=False,
+    )

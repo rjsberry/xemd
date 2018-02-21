@@ -12,16 +12,16 @@
 //   notice, this list of conditions and the following disclaimer in the
 //   documentation and/or other materials provided with the distribution.
 
-#include <iostream>
+#ifndef INCLUDE_XEMD_CEEMDAN_HPP_
+#define INCLUDE_XEMD_CEEMDAN_HPP_
 
 #include <xtensor-python/pyarray.hpp>
 
 namespace xemd {
 
 void
-emd(const xt::pyarray<double>& s)
-{
-  std::cout << "CORE: `xemd::emd` called" << std::endl;
-}
+ceemdan(const xt::pyarray<double>& s);
 
 }  // namespace xemd
+
+#endif  // INCLUDE_XEMD_CEEMDAN_HPP_

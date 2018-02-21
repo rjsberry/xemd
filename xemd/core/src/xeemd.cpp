@@ -19,9 +19,9 @@
 namespace xemd {
 
 void
-emd(const xt::pyarray<double>& s)
+eemd(const xt::pyarray<double>& s)
 {
-  std::cout << "CORE: `xemd::emd` called" << std::endl;
+  std::cout << "CORE: `xemd::eemd` called" << std::endl;
 }
 
 }  // namespace xemd

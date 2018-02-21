@@ -12,16 +12,34 @@
 //   notice, this list of conditions and the following disclaimer in the
 //   documentation and/or other materials provided with the distribution.
 
-#include <iostream>
-
+#include <pybind11/pybind11.h>
+#define FORCE_IMPORT_ARRAY
 #include <xtensor-python/pyarray.hpp>
 
-namespace xemd {
+#include "xemd.hpp"
+#include "xeemd.hpp"
+#include "xceemdan.hpp"
 
-void
-emd(const xt::pyarray<double>& s)
+namespace {
+
+const char* EMD_DOCSTRING =
+  "Empirical mode decomposition";
+
+const char* EEMD_DOCSTRING =
+  "Ensemble empirical mode decomposition";
+
+const char* CEEMDAN_DOCSTRING =
+  "Complete ensemble empirical mode decomposition with adaptive noise";
+
+}  // namespace
+
+PYBIND11_MODULE(xemd_core, m)
 {
-  std::cout << "CORE: `xemd::emd` called" << std::endl;
-}
+  xt::import_numpy();
 
-}  // namespace xemd
+  m.doc() = "The xemd C++ back-end";
+
+  m.def("emd", xemd::emd, EMD_DOCSTRING);
+  m.def("eemd", xemd::eemd, EEMD_DOCSTRING);
+  m.def("ceemdan", xemd::ceemdan, CEEMDAN_DOCSTRING);
+}

@@ -3,6 +3,7 @@
 
 # Building
 build/
+dist/
 tmp/
 xemd.egg-info/
 *.so
