@@ -24,10 +24,9 @@
   namespace {
   template<
     typename T,
-    std::size_t N,
     typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
   >
-  using _xtensor = xt::jltensor<T, N>;
+  using _xtensor = xt::jltensor<T, 1>;
   }  // namespace
  
   #include <xtensor-julia/jlarray.hpp>
@@ -45,10 +44,9 @@
   namespace {
   template<
     typename T,
-    std::size_t N,
     typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
   >
-  using _xtensor = xt::pytensor<T, N>;
+  using _xtensor = xt::pytensor<T, 1>;
   }  // namespace
  
   #include <xtensor-python/pyarray.hpp>
@@ -66,10 +64,9 @@
   namespace {
   template<
     typename T,
-    std::size_t N,
     typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
   >
-  using _xtensor = xt::rtensor<T, N>;
+  using _xtensor = xt::rtensor<T, 1>;
   }  // namespace
  
   #include <xtensor-r/rarray.hpp>
@@ -87,10 +84,9 @@
   namespace {
   template<
     typename T,
-    std::size_t N,
     typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
   >
-  using _xtensor = xt::xtensor<T, N>;
+  using _xtensor = xt::xtensor<T, 1>;
   }  // namespace
  
   #include <xtensor/xarray.hpp>
@@ -106,24 +102,21 @@
 
 namespace xemd {
 
-template<typename T, std::size_t N>
+template<typename T>
 void
-emd(const _xtensor<T, N>& xin) {
-  static_assert(N == 1);
+emd(const _xtensor<T>& xin) {
   std::cout << "CORE: `xemd::emd` called" << std::endl;
 }
 
-template<typename T, std::size_t N>
+template<typename T>
 void
-eemd(const _xtensor<T, N>& xin) {
-  static_assert(N == 1);
+eemd(const _xtensor<T>& xin) {
   std::cout << "CORE: `xemd::eemd` called" << std::endl;
 }
 
-template<typename T, std::size_t N>
+template<typename T>
 void
-ceemdan(const _xtensor<T, N>& xin) {
-  static_assert(N == 1);
+ceemdan(const _xtensor<T>& xin) {
   std::cout << "CORE: `xemd::ceemdan` called" << std::endl;
 }
 
