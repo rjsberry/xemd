@@ -32,41 +32,39 @@ def assert_called():
     return AssertCall()
 
 
-# Numpy signal dimensions
-
-def test_emd_np_array_1dim_assertions(monkeypatch, assert_called):
+def test_emd_np_array_one_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.emd", assert_called)
     xemd.emd(np.random.rand(np.random.randint(RNG_SEED + 1)))
     assert assert_called.called
 
 
-def test_emd_np_array_1dim_assertions(monkeypatch, assert_called):
+def test_eemd_np_array_one_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.eemd", assert_called)
     xemd.eemd(np.random.rand(np.random.randint(RNG_SEED + 1)))
     assert assert_called.called
 
 
-def test_emd_np_array_1dim_assertions(monkeypatch, assert_called):
+def test_ceemdan_np_array_one_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.ceemdan", assert_called)
     xemd.ceemdan(np.random.rand(np.random.randint(RNG_SEED + 1)))
     assert assert_called.called
 
 
-def test_emd_np_array_1dim_assertions(monkeypatch, assert_called):
+def test_emd_np_array_multi_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.emd", assert_called)
     with pytest.raises(ValueError):
         xemd.eemd(np.random.rand(np.random.randint(RNG_SEED + 1), 2))
     assert not assert_called.called
 
 
-def test_emd_np_array_1dim_assertions(monkeypatch, assert_called):
+def test_eemd_np_array_multi_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.eemd", assert_called)
     with pytest.raises(ValueError):
        xemd.eemd(np.random.rand(np.random.randint(RNG_SEED + 1), 2))
     assert not assert_called.called
 
 
-def test_emd_np_array_1dim_assertions(monkeypatch, assert_called):
+def test_ceemdan_np_array_multi_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.ceemdan", assert_called)
     with pytest.raises(ValueError):
         xemd.ceemdan(np.random.rand(np.random.randint(RNG_SEED + 1), 2))
