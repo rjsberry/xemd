@@ -19,7 +19,7 @@ import pytest
 
 import xemd
 
-RNG_SEED = datetime.now().second
+RNG_SEED = datetime.now().second + 1
 
 
 @pytest.fixture
@@ -34,38 +34,38 @@ def assert_called():
 
 def test_emd_np_array_one_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.emd", assert_called)
-    xemd.emd(np.random.rand(np.random.randint(RNG_SEED + 1)))
+    xemd.emd(np.random.rand(np.random.randint(RNG_SEED)))
     assert assert_called.called
 
 
 def test_eemd_np_array_one_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.eemd", assert_called)
-    xemd.eemd(np.random.rand(np.random.randint(RNG_SEED + 1)))
+    xemd.eemd(np.random.rand(np.random.randint(RNG_SEED)))
     assert assert_called.called
 
 
 def test_ceemdan_np_array_one_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.ceemdan", assert_called)
-    xemd.ceemdan(np.random.rand(np.random.randint(RNG_SEED + 1)))
+    xemd.ceemdan(np.random.rand(np.random.randint(RNG_SEED)))
     assert assert_called.called
 
 
 def test_emd_np_array_multi_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.emd", assert_called)
     with pytest.raises(ValueError):
-        xemd.eemd(np.random.rand(np.random.randint(RNG_SEED + 1), 2))
+        xemd.emd(np.random.rand(np.random.randint(RNG_SEED), 2))
     assert not assert_called.called
 
 
 def test_eemd_np_array_multi_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.eemd", assert_called)
     with pytest.raises(ValueError):
-       xemd.eemd(np.random.rand(np.random.randint(RNG_SEED + 1), 2))
+       xemd.eemd(np.random.rand(np.random.randint(RNG_SEED), 2))
     assert not assert_called.called
 
 
 def test_ceemdan_np_array_multi_dim_assertions(monkeypatch, assert_called):
     monkeypatch.setattr("xemd_core.ceemdan", assert_called)
     with pytest.raises(ValueError):
-        xemd.ceemdan(np.random.rand(np.random.randint(RNG_SEED + 1), 2))
+        xemd.ceemdan(np.random.rand(np.random.randint(RNG_SEED), 2))
     assert not assert_called.called

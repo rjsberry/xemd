@@ -15,12 +15,12 @@
 #ifndef INCLUDE_XEMD_EMD_HPP_
 #define INCLUDE_XEMD_EMD_HPP_
 
-#include <xtensor-python/pyarray.hpp>
+#include <xtensor-python/pytensor.hpp>
 
 namespace xemd {
 
 void
-emd(const xt::pyarray<double>& s);
+emd(const xt::pytensor<double, 1>& s);
 
 }  // namespace xemd
 

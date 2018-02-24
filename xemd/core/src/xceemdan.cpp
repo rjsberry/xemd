@@ -14,12 +14,12 @@
 
 #include <iostream>
 
-#include <xtensor-python/pyarray.hpp>
+#include <xtensor-python/pytensor.hpp>
 
 namespace xemd {
 
 void
-ceemdan(const xt::pyarray<double>& s)
+ceemdan(const xt::pytensor<double, 1>& s)
 {
   std::cout << "CORE: `xemd::ceemdan` called" << std::endl;
 }

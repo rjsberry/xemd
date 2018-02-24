@@ -14,12 +14,12 @@
 
 #include <iostream>
 
-#include <xtensor-python/pyarray.hpp>
+#include <xtensor-python/pytensor.hpp>
 
 namespace xemd {
 
 void
-eemd(const xt::pyarray<double>& s)
+eemd(const xt::pytensor<double, 1>& s)
 {
   std::cout << "CORE: `xemd::eemd` called" << std::endl;
 }
