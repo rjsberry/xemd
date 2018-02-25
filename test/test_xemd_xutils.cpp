@@ -18,6 +18,48 @@
 #include <xemd/xemd.hpp>
 #include "test.hpp"
 
+const std::size_t ARRAY_LENGTH = 10;
+
+TEST_CASE ( "test_diff", "[test_xutil]" ) {
+  auto linear = xt::arange<int>({ARRAY_LENGTH});
+  auto linear_d = xemd::xutils::Diff<int>(linear);
+  
+  REQUIRE( linear_d.size() == linear.size() - 1 );
+  for (std::size_t i = 0; i < linear.size() - 1; ++i) {
+      REQUIRE( linear_d[i] == 1 );
+      REQUIRE( (linear[i + 1] - linear[i]) == 1 );
+  }
+
+  auto nonlinear = xt::arange<double>({ARRAY_LENGTH});
+  for (auto e : nonlinear) {
+    e *= xt::random::rand<double>({1})[0];
+  }
+  auto nonlinear_d = xemd::xutils::Diff<double>(linear);
+
+  REQUIRE( nonlinear_d.size() == nonlinear.size() - 1 );
+  for (std::size_t i = 0; i < linear.size() - 1; ++i) {
+      REQUIRE( nonlinear_d[i] == (nonlinear[i + 1] - nonlinear[i]) );
+  }
+}
+
+TEST_CASE( "test_is_monotonic", "[test_xutil]" ) {
+  auto constant = xt::ones<int>({ARRAY_LENGTH});
+  REQUIRE( xemd::xutils::IsMonotonic<int>(constant) );
+
+  auto linear = xt::arange<int>(-static_cast<int>(ARRAY_LENGTH)/2,
+                                static_cast<int>(ARRAY_LENGTH)/2);
+  REQUIRE( xemd::xutils::IsMonotonic<int>(linear) );
+
+  auto noise = xt::random::randn<double>({ARRAY_LENGTH});
+  REQUIRE( !xemd::xutils::IsMonotonic<double>(noise) );
+
+  auto quadratic = linear * linear;
+  REQUIRE( !xemd::xutils::IsMonotonic<int>(quadratic) );
+
+  auto cubic = linear * linear * linear;
+  REQUIRE( xemd::xutils::IsMonotonic<int>(cubic) );
+}
+
 TEST_CASE( "test_num_imfs", "[test_xutil]" ) {
   struct TestCaseTable {
     std::size_t input_tensor_size;
@@ -36,27 +78,5 @@ TEST_CASE( "test_num_imfs", "[test_xutil]" ) {
   for (const auto& test : tests) {
     auto mock_array = xt::zeros<double>({test.input_tensor_size});
     REQUIRE( xemd::xutils::NumImfs<double>(mock_array) == test.expected_imfs );
-  }
-}
-
-TEST_CASE ( "test_diff", "[test_xutil]" ) {
-  auto linear = xt::arange<int>({10});
-  auto linear_d = xemd::xutils::Diff<int>(linear);
-  
-  REQUIRE( linear_d.size() == linear.size() - 1 );
-  for (std::size_t i = 0; i < linear.size() - 1; ++i) {
-      REQUIRE( linear_d[i] == 1 );
-      REQUIRE( (linear[i + 1] - linear[i]) == 1 );
-  }
-
-  auto nonlinear = xt::arange<double>({10});
-  for (auto e : nonlinear) {
-    e *= xt::random::rand<double>({1})[0];
-  }
-  auto nonlinear_d = xemd::xutils::Diff<double>(linear);
-
-  REQUIRE( nonlinear_d.size() == nonlinear.size() - 1 );
-  for (std::size_t i = 0; i < linear.size() - 1; ++i) {
-      REQUIRE( nonlinear_d[i] == (nonlinear[i + 1] - nonlinear[i]) );
   }
 }

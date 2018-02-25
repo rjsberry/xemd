@@ -112,6 +112,15 @@ Diff(const xemd::array_type::tensor<T>& x) {
 }
 
 template<typename T> inline
+bool
+IsMonotonic(const xemd::array_type::tensor<T>& x) {
+  if (xt::all(Diff<T>(x) >= 0) || xt::all(Diff<T>(x) <= 0)) {
+    return true;
+  }
+  return false;
+}
+
+template<typename T> inline
 std::size_t
 NumImfs(const xemd::array_type::tensor<T>& x) {
   auto N = x.size();

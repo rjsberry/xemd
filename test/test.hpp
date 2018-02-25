@@ -12,5 +12,10 @@
 //   notice, this list of conditions and the following disclaimer in the
 //   documentation and/or other materials provided with the distribution.
 
+#ifndef INCLUDE_XEMD_UNIT_TEST_INIT_HPP_
+#define INCLUDE_XEMD_UNIT_TEST_INTI_HPP_
+
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
+
+#endif  // INCLUDE_XEMD_UNIT_TEST_INIT_HPP_
