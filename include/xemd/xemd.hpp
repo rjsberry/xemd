@@ -19,84 +19,80 @@
 #include <type_traits>
 
 #if defined(XEMD_USE_XTENSOR_JULIA)
-
   #include <xtensor-julia/jltensor.hpp>
-  namespace {
-  template<
-    typename T,
-    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
-  >
-  using _xtensor = xt::jltensor<T, 1>;
-  }  // namespace
- 
   #include <xtensor-julia/jlarray.hpp>
-  namespace {
+
+  namespace xemd {
+  namespace array_type {
   template<
     typename T,
     typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
   >
-  using _xarray = xt::jlarray<T>;
-  }  // namespace
+  using tensor = xt::jltensor<T, 1>;
+  template<
+    typename T,
+    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  >
+  using array = xt::jlarray<T>;
+  }  // namespace array_type
+  }  // namespace xemd
 
 #elif defined(XEMD_USE_XTENSOR_PYTHON)
-
   #include <xtensor-python/pytensor.hpp>
-  namespace {
-  template<
-    typename T,
-    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
-  >
-  using _xtensor = xt::pytensor<T, 1>;
-  }  // namespace
- 
   #include <xtensor-python/pyarray.hpp>
-  namespace {
+
+  namespace xemd {
+  namespace array_type {
   template<
     typename T,
     typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
   >
-  using _xarray = xt::pyarray<T>;
-  }  // namespace
+  using tensor = xt::pytensor<T, 1>;
+  template<
+    typename T,
+    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  >
+  using array = xt::pyarray<T>;
+  }  // namespace array_type
+  }  // namespace xemd
 
 #elif defined(XEMD_USE_XTENSOR_R)
-
   #include <xtensor-r/rtensor.hpp>
-  namespace {
-  template<
-    typename T,
-    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
-  >
-  using _xtensor = xt::rtensor<T, 1>;
-  }  // namespace
- 
   #include <xtensor-r/rarray.hpp>
-  namespace {
+
+  namespace xemd {
+  namespace array_type {
   template<
     typename T,
     typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
   >
-  using _xarray = xt::rarray<T>;
-  }  // namespace
+  using tensor = xt::rtensor<T, 1>;
+  template<
+    typename T,
+    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  >
+  using array = xt::rarray<T>;
+  }  // namespace array_type
+  }  // namespace xemd
 
 #else
-
   #include <xtensor/xtensor.hpp>
-  namespace {
-  template<
-    typename T,
-    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
-  >
-  using _xtensor = xt::xtensor<T, 1>;
-  }  // namespace
- 
   #include <xtensor/xarray.hpp>
-  namespace {
+
+  namespace xemd {
+  namespace array_type {
   template<
     typename T,
     typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
   >
-  using _xarray = xt::xarray<T>;
-  }  // namespace
+  using tensor = xt::xtensor<T, 1>;
+  template<
+    typename T,
+    typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+  >
+  using array = xt::xarray<T>;
+  }  // namespace array_type
+  }  // namespace xemd
 
 #endif
 
@@ -104,19 +100,22 @@ namespace xemd {
 
 template<typename T>
 void
-emd(const _xtensor<T>& xin) {
+emd(const xemd::array_type::tensor<T>& xin) {
+  xemdutils::Diff(xin);
   std::cout << "CORE: `xemd::emd` called" << std::endl;
 }
 
 template<typename T>
 void
-eemd(const _xtensor<T>& xin) {
+eemd(const xemd::array_type::tensor<T>& xin) {
+  xemdutils::Diff(xin);
   std::cout << "CORE: `xemd::eemd` called" << std::endl;
 }
 
 template<typename T>
 void
-ceemdan(const _xtensor<T>& xin) {
+ceemdan(const xemd::array_type::tensor<T>& xin) {
+  xemdutils::Diff(xin);
   std::cout << "CORE: `xemd::ceemdan` called" << std::endl;
 }
 
