@@ -102,6 +102,16 @@ namespace xemd {
 namespace xutils {
 
 template<typename T> inline
+xemd::array_type::tensor<T>
+Diff(const xemd::array_type::tensor<T>& x) {
+  xemd::array_type::tensor<T> d = xt::zeros<T>({x.size() - 1});
+  for (std::size_t i = 0; i < x.size() - 1; ++i) {
+    d[i] = x[i + 1] - x[i];
+  }
+  return d;
+}
+
+template<typename T> inline
 std::size_t
 NumImfs(const xemd::array_type::tensor<T>& x) {
   auto N = x.size();
