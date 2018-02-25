@@ -15,6 +15,7 @@
 #ifndef INCLUDE_XEMD_EMPIRICAL_MODE_DECOMPOSITION_TEMPLATE_LIBRARY_HPP_
 #define INCLUDE_XEMD_EMPIRICAL_MODE_DECOMPOSITION_TEMPLATE_LIBRARY_HPP_
 
+#include <cmath>
 #include <iostream>
 #include <type_traits>
 
@@ -98,24 +99,36 @@
 
 namespace xemd {
 
+namespace xutils {
+
+template<typename T> inline
+std::size_t
+NumImfs(const xemd::array_type::tensor<T>& x) {
+  auto N = x.size();
+  if (N <= 3) {
+    return 1;
+  } else {
+    return std::floor(std::log2(N));
+  }
+}
+
+}  // namespace xutils
+
 template<typename T>
 void
 emd(const xemd::array_type::tensor<T>& xin) {
-  xemdutils::Diff(xin);
   std::cout << "CORE: `xemd::emd` called" << std::endl;
 }
 
 template<typename T>
 void
 eemd(const xemd::array_type::tensor<T>& xin) {
-  xemdutils::Diff(xin);
   std::cout << "CORE: `xemd::eemd` called" << std::endl;
 }
 
 template<typename T>
 void
 ceemdan(const xemd::array_type::tensor<T>& xin) {
-  xemdutils::Diff(xin);
   std::cout << "CORE: `xemd::ceemdan` called" << std::endl;
 }
 
