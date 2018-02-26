@@ -19,6 +19,9 @@
 #include <cmath>
 #include <iostream>
 #include <type_traits>
+#include <vector>
+
+#include <xtensor/xadapt.hpp>
 
 #if defined(XEMD_USE_XTENSOR_JULIA)
   #include <xtensor-julia/jltensor.hpp>
@@ -139,6 +142,81 @@ NumImfs(const xemd::array_type::tensor<T>& x) {
 }
 
 }  // namespace xutils
+
+namespace xfindextrema {
+
+struct Extrema {
+  Extrema(const std::vector<std::size_t>& maxima_,
+          const std::vector<std::size_t>& minima_,
+          std::size_t zero_crossings_) {
+    std::vector<std::size_t> maxima_shape_ = {maxima_.size()};
+    std::vector<std::size_t> minima_shape_ = {minima_.size()};
+
+    maxima = xt::adapt(maxima_, maxima_shape_);
+    minima = xt::adapt(minima_, minima_shape_);
+    zero_crossings = zero_crossings_;
+  }
+
+  xemd::array_type::tensor<std::size_t> maxima = {0};
+  xemd::array_type::tensor<std::size_t> minima = {0};
+  std::size_t                           zero_crossings = 0;
+};
+
+template<typename T> inline
+std::size_t
+FirstNonZero(const xemd::array_type::tensor<T>& x) {
+  for (std::size_t i = 0; i < x.size(); ++i) {
+    if (x[i]) {
+      return i;
+    }
+  }
+  return x.size() - 1;
+}
+
+template<typename T>
+xemd::xfindextrema::Extrema
+FindExtrema(const xemd::array_type::tensor<T>& x) {
+  std::vector<std::size_t> maxima;
+  std::vector<std::size_t> minima;
+  std::size_t zero_crossings = 0;
+
+  auto dx = xemd::xutils::Diff<T>(x);
+
+  enum GradientClassifier { RISING, FALLING };
+  enum SignClassifier { POSITIVE, NEGATIVE };
+  
+  std::size_t i_begin = FirstNonZero(dx);
+  auto gradient_cache = (dx[i_begin] > 0) ? RISING : FALLING;
+  auto sign_cache = (x[i_begin] >= 0) ? POSITIVE : NEGATIVE;
+
+  for (std::size_t i = i_begin; i < dx.size(); ++i) {
+    if (!dx[i]) {
+      continue;
+    }
+
+    auto this_gradient = (dx[i] > 0) ? RISING : FALLING;
+    auto this_sign = (x[i + 1] >= 0) ? POSITIVE : NEGATIVE;
+
+    if (this_gradient != gradient_cache) {
+      if (this_gradient == FALLING) {
+        maxima.push_back(i);
+      } else {
+        minima.push_back(i);
+      }
+    }
+
+    if (this_sign != sign_cache) {
+      zero_crossings += 1;
+    }
+
+    gradient_cache = this_gradient;
+    sign_cache = this_sign;
+  }
+
+  return {maxima, minima, zero_crossings};
+}
+
+}  // namespace xfindpeaks
 
 template<typename T>
 void
