@@ -20,7 +20,7 @@
 
 const std::size_t ARRAY_LENGTH = 10;
 
-TEST_CASE ( "test_diff", "[test_xutil]" ) {
+TEST_CASE( "test_diff", "[test_xutil]" ) {
   auto linear = xt::arange<int>({ARRAY_LENGTH});
   auto linear_d = xemd::xutils::Diff<int>(linear);
   
@@ -39,6 +39,28 @@ TEST_CASE ( "test_diff", "[test_xutil]" ) {
   REQUIRE( nonlinear_d.size() == nonlinear.size() - 1 );
   for (std::size_t i = 0; i < linear.size() - 1; ++i) {
       REQUIRE( nonlinear_d[i] == (nonlinear[i + 1] - nonlinear[i]) );
+  }
+}
+
+TEST_CASE( "test_extrapolate", "[test_xutil]" ) {
+  struct TestCase {
+    int x0, y0, x1, y1, x2, y2;
+  };
+
+  std::vector<TestCase> tests = {
+    {0, 0, 1, 0, 2, 0},
+    {1, 0, 2, 0, 0, 0},
+    {2, 0, 1, 0, 0, 0},
+    {0, 0, 1, 1, 2, 2},
+    {1, 1, 0, 0, 2, 2},
+    {2, 2, 1, 1, 0, 0},
+    {0, 2, 1, 1, 2, 0},
+    {1, 1, 0, 2, 2, 0},
+    {2, 0, 1, 1, 0, 2},
+  };
+
+  for (const auto& t : tests) {
+    REQUIRE( xemd::xutils::Extrapolate<int>(t.x0, t.y0, t.x1, t.y1, t.x2) == t.y2 );
   }
 }
 

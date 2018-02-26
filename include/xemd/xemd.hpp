@@ -15,6 +15,7 @@
 #ifndef INCLUDE_XEMD_EMPIRICAL_MODE_DECOMPOSITION_TEMPLATE_LIBRARY_HPP_
 #define INCLUDE_XEMD_EMPIRICAL_MODE_DECOMPOSITION_TEMPLATE_LIBRARY_HPP_
 
+#include <cassert>
 #include <cmath>
 #include <iostream>
 #include <type_traits>
@@ -109,6 +110,12 @@ Diff(const xemd::array_type::tensor<T>& x) {
     d[i] = x[i + 1] - x[i];
   }
   return d;
+}
+
+template<typename T> inline
+T
+Extrapolate(T x0, T y0, T x1, T y1, T x) {
+  return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
 }
 
 template<typename T> inline
