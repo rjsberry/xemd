@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <xtensor/xadapt.hpp>
+#include <xtensor/xio.hpp>
 
 #if defined(XEMD_USE_XTENSOR_JULIA)
   #include <xtensor-julia/jltensor.hpp>
@@ -168,6 +169,33 @@ FirstNonZero(const xemd::array_type::tensor<T>& x) {
   return x.size() - 1;
 }
 
+template<typename T> inline
+bool
+CheckMaxima(T dx0, T dx) {
+  if (dx0 > 0 && dx < 0) {
+    return true;
+  }
+  return false;
+}
+
+template<typename T> inline
+bool
+CheckMinima(T dx0, T dx) {
+  if (dx0 < 0 && dx > 0) {
+    return true;
+  }
+  return false;
+}
+
+template<typename T> inline
+bool
+CheckZeroCrossing(T x0, T x) {
+  if ((x0 < 0 && x > 0) || (x0 > 0 && x < 0)) {
+    return true;
+  }
+  return false;
+}
+
 template<typename T>
 xemd::xfindextrema::Extrema
 FindExtrema(const xemd::array_type::tensor<T>& x) {
@@ -176,36 +204,18 @@ FindExtrema(const xemd::array_type::tensor<T>& x) {
   std::size_t zero_crossings = 0;
 
   auto dx = xemd::xutils::Diff<T>(x);
-
-  enum GradientClassifier { RISING, FALLING };
-  enum SignClassifier { POSITIVE, NEGATIVE };
   
-  std::size_t i_begin = FirstNonZero(dx);
-  auto gradient_cache = (dx[i_begin] > 0) ? RISING : FALLING;
-  auto sign_cache = (x[i_begin] >= 0) ? POSITIVE : NEGATIVE;
-
-  for (std::size_t i = i_begin; i < dx.size(); ++i) {
-    if (!dx[i]) {
-      continue;
-    }
-
-    auto this_gradient = (dx[i] > 0) ? RISING : FALLING;
-    auto this_sign = (x[i + 1] >= 0) ? POSITIVE : NEGATIVE;
-
-    if (this_gradient != gradient_cache) {
-      if (this_gradient == FALLING) {
-        maxima.push_back(i);
-      } else {
-        minima.push_back(i);
+  for (std::size_t i = 0; i < x.size() - 1; ++i) {
+    if (i < dx.size() - 1) {
+      if (CheckMaxima<T>(dx[i], dx[i + 1])) {
+        maxima.push_back(i + 1);
+      } else if (CheckMinima<T>(dx[i], dx[i + 1])) {
+        minima.push_back(i + 1);
       }
     }
-
-    if (this_sign != sign_cache) {
-      zero_crossings += 1;
+    if (CheckZeroCrossing<T>(x[i], x[i + 1])) {
+      ++zero_crossings;
     }
-
-    gradient_cache = this_gradient;
-    sign_cache = this_sign;
   }
 
   return {maxima, minima, zero_crossings};

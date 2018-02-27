@@ -37,6 +37,60 @@ TEST_CASE( "test_first_non_zero", "[test_xfindextrema]" ) {
   }
 }
 
+TEST_CASE( "test_check_extrema", "[test_xfindextrema]" ) {
+  struct TestCase {
+    int  a, b;
+    bool expected;
+  };
+
+  SECTION( "test_check_maxima" ) {
+    std::vector<TestCase> tests = {
+      {1, -1, true},
+      {-1, 1, false},
+      {1, 1, false},
+      {-1, -1, false},
+      {1, 0, false},
+      {0, 1, false},
+    };
+
+    for (const auto& t : tests) {
+      REQUIRE( xemd::xfindextrema::CheckMaxima(t.a, t.b) == t.expected );
+    }
+  }
+
+  SECTION ( "test_check_minima" ) {
+    std::vector<TestCase> tests = {
+      {1, -1, false},
+      {-1, 1, true},
+      {1, 1, false},
+      {-1, -1, false},
+      {1, 0, false},
+      {0, 1, false},
+    };
+
+    for (const auto& t : tests) {
+      REQUIRE( xemd::xfindextrema::CheckMinima(t.a, t.b) == t.expected );
+    }
+  }
+
+  SECTION( "test_check_zero_crossing" ) {
+     std::vector<TestCase> tests = {
+      {1, -1, true},
+      {-1, 1, true},
+      {1, 1, false},
+      {-1, -1, false},
+      {0, 1, false},
+      {1, 0, false},
+      {0, -1, false},
+      {-1, 0, false},
+    };
+
+    for (const auto& t : tests) {
+      REQUIRE( xemd::xfindextrema::CheckZeroCrossing(t.a, t.b) == t.expected );
+    }   
+  }
+}
+
 TEST_CASE( "test_find_extrema", "[test_xfindextrema]" ) {
   struct ExtremaSTL {
     std::vector<std::size_t> maxima;
@@ -65,15 +119,15 @@ TEST_CASE( "test_find_extrema", "[test_xfindextrema]" ) {
     auto e = xemd::xfindextrema::FindExtrema(x);
 
     REQUIRE( e.maxima.size() == t.expected.maxima.size() );
+    REQUIRE( e.minima.size() == t.expected.minima.size() );
+    CHECK( e.zero_crossings == t.expected.zero_crossings );
+
     for (std::size_t i = 0; i < e.maxima.size(); ++i) {
       REQUIRE( e.maxima[i] == t.expected.maxima[i] );
     }
 
-    REQUIRE( e.minima.size() == t.expected.minima.size() );
     for (std::size_t i = 0; i < e.minima.size(); ++i) {
       REQUIRE( e.minima[i] == t.expected.minima[i] );
     }
-
-    REQUIRE( e.zero_crossings == t.expected.zero_crossings );
   }
 }
