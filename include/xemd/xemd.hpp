@@ -204,15 +204,15 @@ FindExtrema(const xemd::array_type::tensor<T>& x) {
   std::size_t zero_crossings = 0;
 
   auto dx = xemd::xutils::Diff<T>(x);
-  
-  for (std::size_t i = 0; i < x.size() - 1; ++i) {
-    if (i < dx.size() - 1) {
-      if (CheckMaxima<T>(dx[i], dx[i + 1])) {
-        maxima.push_back(i + 1);
-      } else if (CheckMinima<T>(dx[i], dx[i + 1])) {
-        minima.push_back(i + 1);
-      }
+
+  for (std::size_t i = 0; i < dx.size() - 1; ++i) {
+    if (CheckMaxima<T>(dx[i], dx[i + 1])) {
+      maxima.push_back(i + 1);
+    } else if (CheckMinima<T>(dx[i], dx[i + 1])) {
+      minima.push_back(i + 1);
     }
+  }
+  for (std::size_t i = 0; i < x.size() - 1; ++i) {
     if (CheckZeroCrossing<T>(x[i], x[i + 1])) {
       ++zero_crossings;
     }
