@@ -7,8 +7,6 @@
 // https://github.com/rjsberry/xemd/blob/master/LICENSE)
 //
 
-#include <iostream>
-
 #include <xtensor/xtensor.hpp>
 
 #include <xemd/xemd.hpp>
@@ -30,8 +28,8 @@ ApproximatesTo(double test, double target, double tolerance) {
 
 TEST_CASE( "test_spline_interpolation", "[test_xspline]" ) {
   // Quadratic.
-  xt::xtensor<double, 1> X = {-10, -7, -3,  0,  1,  2,   4,  7,  8,  10,  12};
-  xt::xtensor<double, 1> Y = {100, 49,  9,  0,  1,  4,  16, 49, 64, 100, 144};
+  xt::xtensor<double, 1> X = {-10, -7, -3,  0,  1,  2,   4,  7,  8,  10,  12,  13};
+  xt::xtensor<double, 1> Y = {100, 49,  9,  0,  1,  4,  16, 49, 64, 100, 144, 169};
 
   auto s = xemd::xspline::Spline<double>(X, Y);
 

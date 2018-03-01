@@ -17,7 +17,6 @@
 #include <vector>
 
 #include <xtensor/xadapt.hpp>
-#include <xtensor/xio.hpp>
 #include <xtensor/xview.hpp>
 
 #include <xtensor-blas/xlinalg.hpp>
@@ -230,19 +229,6 @@ namespace xspline {
 
 template<typename T>
 struct SplineCoefficients {
-  /*
-  SplineCoefficients(const xemd::array_type::tensor<T>& _a,
-                     const xemd::array_type::tensor<T>& _b,
-                     const xemd::array_type::tensor<T>& _c,
-                     const xemd::array_type::tensor<T>& _d,
-                     const xemd::array_type::tensor<T>& _x)
-    : a(_a)
-    , b(_b)
-    , c(_c)
-    , d(_d)
-    , x(_x) {
-  }
-  */
   xemd::array_type::tensor<T> a, b, c, d, x;
 };
 
@@ -271,11 +257,11 @@ CalculateSplineCoefficients(const xemd::array_type::tensor<T>& x,
     // Off-diagonal (upper)
     xt::diag(xt::view(h, xt::range(0, h.size() - 2)), 1) +
     // Off-diagonal (lower)
-    xt::diag(xt::view(h, xt::range(0, h.size() - 2)), -1) //+
+    xt::diag(xt::view(h, xt::range(0, h.size() - 2)), -1) +
     // Corner (upper right)
-    //xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), a.size() - 1) +
+    xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), a.size() - 1) +
     // Corner (lower left)
-    //xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), -(a.size() - 1))
+    xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), -(a.size() - 1))
   ;
   // Solve the constructed tridiagonal system matrix with `g` for `c`.
   xemd::array_type::tensor<T> c = xt::concatenate(xtuple(
