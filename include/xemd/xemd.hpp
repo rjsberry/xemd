@@ -18,6 +18,9 @@
 
 #include <xtensor/xadapt.hpp>
 #include <xtensor/xio.hpp>
+#include <xtensor/xview.hpp>
+
+#include <xtensor-blas/xlinalg.hpp>
 
 #if defined(XEMD_USE_XTENSOR_JULIA)
   #include <xtensor-julia/jltensor.hpp>
@@ -222,6 +225,116 @@ FindExtrema(const xemd::array_type::tensor<T>& x) {
 }
 
 }  // namespace xfindpeaks
+
+namespace xspline {
+
+template<typename T>
+struct SplineCoefficients {
+  /*
+  SplineCoefficients(const xemd::array_type::tensor<T>& _a,
+                     const xemd::array_type::tensor<T>& _b,
+                     const xemd::array_type::tensor<T>& _c,
+                     const xemd::array_type::tensor<T>& _d,
+                     const xemd::array_type::tensor<T>& _x)
+    : a(_a)
+    , b(_b)
+    , c(_c)
+    , d(_d)
+    , x(_x) {
+  }
+  */
+  xemd::array_type::tensor<T> a, b, c, d, x;
+};
+
+template<typename T>
+SplineCoefficients<T>
+CalculateSplineCoefficients(const xemd::array_type::tensor<T>& x,
+                            const xemd::array_type::tensor<T>& y) {
+  auto N = x.size();
+  auto h = xutils::Diff<T>(x);
+
+  xemd::array_type::tensor<T> a = xt::zeros<T>({N - 2});
+  xemd::array_type::tensor<T> b = xt::zeros<T>({N});
+  xemd::array_type::tensor<T> g = xt::zeros<T>({N});
+  for (std::size_t i = 0; i < N - 1; ++i) {
+    b[i] = (y[i+1] - y[i]) / h[i];
+  }
+  for (std::size_t i = 0; i < N - 2; ++i) {
+    a[i] = 2 * (h[i+1] + h[i]);  // System matrix diagonal.
+    g[i+1] = b[i+1] - b[i];
+  }
+
+  // Construct the tri-diagonal matrix for the "periodic" boundary condition.
+  auto diag =
+    // Diagonal
+    xt::diag(a) +
+    // Off-diagonal (upper)
+    xt::diag(xt::view(h, xt::range(0, h.size() - 2)), 1) +
+    // Off-diagonal (lower)
+    xt::diag(xt::view(h, xt::range(0, h.size() - 2)), -1) //+
+    // Corner (upper right)
+    //xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), a.size() - 1) +
+    // Corner (lower left)
+    //xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), -(a.size() - 1))
+  ;
+  // Solve the constructed tridiagonal system matrix with `g` for `c`.
+  xemd::array_type::tensor<T> c = xt::concatenate(xtuple(
+    xt::zeros<T>({1}),
+    xt::linalg::solve(diag, xt::view(g, xt::range(1, g.size() - 1))),
+    xt::zeros<T>({1})
+  ));
+
+  xemd::array_type::tensor<T> d = xt::zeros<T>({N});
+  for (std::size_t i = 0; i < N - 1; ++i) {
+    if (i < N - 2) {
+      d[i] = (c[i+1] - c[i]) / h[i];
+      b[i] -= h[i] * (c[i+1] + 2 * c[i]);
+    } else {
+      d[i] = -(c[i] / h[i]);
+      b[i] -= 2 * c[i] * h[i];
+    }
+    c[i] *= 3.;
+  }
+
+  return {y, b, c, d, x};
+}
+
+template<typename T>
+class Spline {
+public:
+  Spline(const xemd::array_type::tensor<T>& x,
+         const xemd::array_type::tensor<T>& y) {
+    assert(x.size() == y.size());
+    coefficients_ = CalculateSplineCoefficients<T>(x, y);
+  }
+
+  T
+  operator()(T x) {
+    return EvaluateCoefficients_(x);
+  }
+
+  SplineCoefficients<T> coefficients_;
+
+  T
+  EvaluateCoefficients_(T x) const {
+    T h;
+    std::size_t i = coefficients_.x.size() - 2;
+    for (; i < coefficients_.x.size() - 1; --i) {
+      h = x - coefficients_.x[i];
+      if (h >= 0) {
+        break;
+      }
+    }
+    auto y = coefficients_.d[i];
+    y = y * h + coefficients_.c[i];
+    y = y * h + coefficients_.b[i];
+    y = y * h + coefficients_.a[i];
+
+    return y;
+  }
+};
+
+}  // namespace xspline
 
 template<typename T>
 void
