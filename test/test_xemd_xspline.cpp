@@ -11,14 +11,15 @@
 #include <functional>
 #include <string>
 
-#include <fmt/format.h>
+#include "gtest/gtest.h"
 
-#include <xtensor/xtensor.hpp>
+#include "fmt/format.h"
 
-#include <xemd/xemd.hpp>
-#include "test.hpp"
+#include "xtensor/xtensor.hpp"
 
-#define GENERIC(x) std::function<x ( x )>
+#include "xemd/xemd.hpp"
+
+#define GENERIC(x) std::function<x (x)>
 
 namespace {
 
@@ -46,12 +47,11 @@ ApproximatesTo(double _test, double _target, double confidence) {
 
 }  // namespace
 
-TEST_CASE( "test_spline_interpolation", "[test_xspline]" ) {
+TEST(xspline, spline_interpolation) {
   struct TestCase {
-    xt::xtensor<double, 1> x;
-    GENERIC(tensor)        f;
-    GENERIC(double)        g;
-    std::string            label;
+    tensor          x;
+    GENERIC(tensor) f;
+    GENERIC(double) g;
   };
 
   auto x = xt::linspace<double>(BOUND_MIN, BOUND_MAX, NUM_SAMPLES);
@@ -63,23 +63,18 @@ TEST_CASE( "test_spline_interpolation", "[test_xspline]" ) {
   auto f_runge = [](auto x){ return 1 / (1 + 25 * x * x); };
 
   std::vector<TestCase> tests = {
-    {x, f_linear, f_linear, "f(x) = x"},
-    {x, f_quadratic, f_quadratic, "f(x) = x^2"},
-    {x, f_cubic, f_cubic, "f(x) = x^3"},
-    {x, f_sine, f_sine, "f(x) = sin(x)"},
-    {x, f_runge, f_runge, "f(x) = 1 / (1 + 25x^2)"}
+    {x, f_linear, f_linear},
+    {x, f_quadratic, f_quadratic},
+    {x, f_cubic, f_cubic},
+    {x, f_sine, f_sine},
+    {x, f_runge, f_runge}
   };
 
   for (const auto& test : tests) {
-    SECTION( test.label ) {
-      auto y = test.f(x);
-      auto s = xemd::xspline::Spline<double>(x, y);
-      for (double k = x[0]; k < x[x.size() - 1]; k += TEST_STEP) {
-        auto eval = s(k);
-        SECTION( fmt::format("f({}) = {} :: {}", k, test.g(k), eval) ) {
-          CHECK( ApproximatesTo(eval, test.g(k), CONFIDENCE) );
-        }
-      }
+    auto y = test.f(x);
+    auto s = xemd::xspline::Spline<double>(x, y);
+    for (double k = x[0]; k < x[x.size() - 1]; k += TEST_STEP) {
+      EXPECT_TRUE(ApproximatesTo(s(k), test.g(k), CONFIDENCE));
     }
   }
 }

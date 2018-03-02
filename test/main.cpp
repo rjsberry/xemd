@@ -1,6 +1,3 @@
-#ifndef INCLUDE_XEMD_UNIT_TEST_INIT_HPP_
-#define INCLUDE_XEMD_UNIT_TEST_INTI_HPP_
-
 // xemd: https://github.com/rjsberry/xemd
 //
 // Copyright (C) 2018, Richard Berry <rjsberry@protonmail.com>
@@ -10,7 +7,9 @@
 // https://github.com/rjsberry/xemd/blob/master/LICENSE)
 //
 
-#define CATCH_CONFIG_MAIN
-#include <catch.hpp>
+#include "gtest/gtest.h"
 
-#endif  // INCLUDE_XEMD_UNIT_TEST_INIT_HPP_
+int main(int argc, char* argv[]) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

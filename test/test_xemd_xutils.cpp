@@ -7,22 +7,23 @@
 // https://github.com/rjsberry/xemd/blob/master/LICENSE)
 //
 
-#include <xtensor/xrandom.hpp>
-#include <xtensor/xtensor.hpp>
+#include "gtest/gtest.h"
 
-#include <xemd/xemd.hpp>
-#include "test.hpp"
+#include "xtensor/xrandom.hpp"
+#include "xtensor/xtensor.hpp"
+
+#include "xemd/xemd.hpp"
 
 const std::size_t ARRAY_LENGTH = 10;
 
-TEST_CASE( "test_diff", "[test_xutil]" ) {
+TEST(xutils, diff) {
   auto linear = xt::arange<int>({ARRAY_LENGTH});
   auto linear_d = xemd::xutils::Diff<int>(linear);
   
-  REQUIRE( linear_d.size() == linear.size() - 1 );
+  ASSERT_EQ(linear_d.size(), linear.size() - 1);
   for (std::size_t i = 0; i < linear.size() - 1; ++i) {
-      REQUIRE( linear_d[i] == 1 );
-      REQUIRE( (linear[i + 1] - linear[i]) == 1 );
+    ASSERT_EQ(linear_d[i], 1);
+    ASSERT_EQ((linear[i + 1] - linear[i]), 1);
   }
 
   auto nonlinear = xt::arange<double>({ARRAY_LENGTH});
@@ -31,13 +32,13 @@ TEST_CASE( "test_diff", "[test_xutil]" ) {
   }
   auto nonlinear_d = xemd::xutils::Diff<double>(linear);
 
-  REQUIRE( nonlinear_d.size() == nonlinear.size() - 1 );
+  ASSERT_EQ(nonlinear_d.size(), nonlinear.size() - 1);
   for (std::size_t i = 0; i < linear.size() - 1; ++i) {
-      REQUIRE( nonlinear_d[i] == (nonlinear[i + 1] - nonlinear[i]) );
+    ASSERT_EQ(nonlinear_d[i], (nonlinear[i + 1] - nonlinear[i]));
   }
 }
 
-TEST_CASE( "test_extrapolate", "[test_xutil]" ) {
+TEST(xutils, linear_extrapolation) {
   struct TestCase {
     int x0, y0, x1, y1, x2, y2;
   };
@@ -55,35 +56,35 @@ TEST_CASE( "test_extrapolate", "[test_xutil]" ) {
   };
 
   for (const auto& t : tests) {
-    REQUIRE( xemd::xutils::Extrapolate<int>(t.x0, t.y0, t.x1, t.y1, t.x2) == t.y2 );
+    ASSERT_EQ(xemd::xutils::Extrapolate<int>(t.x0, t.y0, t.x1, t.y1, t.x2), t.y2);
   }
 }
 
-TEST_CASE( "test_is_monotonic", "[test_xutil]" ) {
+TEST(xutils, monotonic) {
   auto constant = xt::ones<int>({ARRAY_LENGTH});
-  REQUIRE( xemd::xutils::IsMonotonic<int>(constant) );
+  ASSERT_TRUE(xemd::xutils::IsMonotonic<int>(constant));
 
   auto linear = xt::arange<int>(-static_cast<int>(ARRAY_LENGTH)/2,
                                 static_cast<int>(ARRAY_LENGTH)/2);
-  REQUIRE( xemd::xutils::IsMonotonic<int>(linear) );
+  ASSERT_TRUE(xemd::xutils::IsMonotonic<int>(linear));
 
   auto noise = xt::random::randn<double>({ARRAY_LENGTH});
-  REQUIRE( !xemd::xutils::IsMonotonic<double>(noise) );
+  ASSERT_FALSE(xemd::xutils::IsMonotonic<double>(noise));
 
   auto quadratic = linear * linear;
-  REQUIRE( !xemd::xutils::IsMonotonic<int>(quadratic) );
+  ASSERT_FALSE(xemd::xutils::IsMonotonic<int>(quadratic));
 
   auto cubic = linear * linear * linear;
-  REQUIRE( xemd::xutils::IsMonotonic<int>(cubic) );
+  ASSERT_TRUE(xemd::xutils::IsMonotonic<int>(cubic));
 }
 
-TEST_CASE( "test_num_imfs", "[test_xutil]" ) {
-  struct TestCaseTable {
+TEST(xutils, num_imfs) {
+  struct TestCase {
     std::size_t input_tensor_size;
     std::size_t expected_imfs;
   };
 
-  TestCaseTable tests[] = {
+  std::vector<TestCase> tests = {
     {1, 1},
     {2, 1},
     {3, 1},
@@ -94,6 +95,6 @@ TEST_CASE( "test_num_imfs", "[test_xutil]" ) {
 
   for (const auto& test : tests) {
     auto mock_array = xt::zeros<double>({test.input_tensor_size});
-    REQUIRE( xemd::xutils::NumImfs<double>(mock_array) == test.expected_imfs );
+    ASSERT_EQ(xemd::xutils::NumImfs<double>(mock_array), test.expected_imfs);
   }
 }
