@@ -289,18 +289,18 @@ template<typename T>
 class Spline {
 public:
   Spline(const xemd::array_type::tensor<T>& x,
-         const xemd::array_type::tensor<T>& y) {
+         const xemd::array_type::tensor<T>& y) 
+      : coefficients_(CalculateSplineCoefficients<T>(x, y)) {
     assert(x.size() == y.size());
-    coefficients_ = CalculateSplineCoefficients<T>(x, y);
   }
 
   T
-  operator()(T x) {
+  operator()(T x) const {
     return EvaluateCoefficients_(x);
   }
 
 private:
-  SplineCoefficients<T> coefficients_;
+  const SplineCoefficients<T> coefficients_;
 
   T
   EvaluateCoefficients_(T x) const {
