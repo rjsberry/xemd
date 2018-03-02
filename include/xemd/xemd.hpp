@@ -299,6 +299,7 @@ public:
     return EvaluateCoefficients_(x);
   }
 
+private:
   SplineCoefficients<T> coefficients_;
 
   T
