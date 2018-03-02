@@ -7,18 +7,38 @@
 // https://github.com/rjsberry/xemd/blob/master/LICENSE)
 //
 
+#include <cmath>
+#include <functional>
+#include <string>
+
+#include <fmt/format.h>
+
 #include <xtensor/xtensor.hpp>
 
 #include <xemd/xemd.hpp>
 #include "test.hpp"
 
-const double FLOATING_POINT_ERROR_TOLERANCE = 0.333;
+#define GENERIC(x) std::function<x ( x )>
 
 namespace {
 
+typedef xt::xtensor<double, 1> tensor;
+
+const double CONFIDENCE = 0.99;
+
+const double TEST_STEP = 0.1;
+
+const double BOUND_MIN = -M_PI;
+const double BOUND_MAX = M_PI;
+const double NUM_SAMPLES = 100;
+
+// Test whether a value lies within a certain confidence level.
 bool
-ApproximatesTo(double test, double target, double tolerance) {
-  if ((test > target - tolerance) && (test < target + tolerance)) {
+ApproximatesTo(double _test, double _target, double confidence) {
+  auto test = fabs(_test);
+  auto target = fabs(_target);
+  if ((test >= (target * confidence)) &&
+      (test <= (target * (2 - confidence)))) {
     return true;
   }
   return false;
@@ -26,37 +46,40 @@ ApproximatesTo(double test, double target, double tolerance) {
 
 }  // namespace
 
-TEST_CASE( "test_spline_interpolation_linear_line", "[test_xspline]" ) {
-  xt::xtensor<double, 1> X = {-10, -5, -1,  1,  5, 10};
-  xt::xtensor<double, 1> Y = {-10, -5, -1,  1,  5, 10};
-  auto s = xemd::xspline::Spline<double>(X, Y);
+TEST_CASE( "test_spline_interpolation", "[test_xspline]" ) {
+  struct TestCase {
+    xt::xtensor<double, 1> x;
+    GENERIC(tensor)        f;
+    GENERIC(double)        g;
+    std::string            label;
+  };
 
-  CHECK( ApproximatesTo(s(-8), -8, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s(-7), -7, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s(-3), -3, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s(-2), -2, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( 0),  0, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( 2),  2, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( 3),  3, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( 7),  7, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( 8),  8, FLOATING_POINT_ERROR_TOLERANCE) );
-}
+  auto x = xt::linspace<double>(BOUND_MIN, BOUND_MAX, NUM_SAMPLES);
 
-TEST_CASE( "test_spline_interpolation_quadratic_line", "[test_xspline]" ) {
-  xt::xtensor<double, 1> X = {-13, -12, -10, -7, -3,  0,  1,  2,   4,  7,  8,  10,  12,  13};
-  xt::xtensor<double, 1> Y = {169, 144, 100, 49,  9,  0,  1,  4,  16, 49, 64, 100, 144, 169};
+  auto f_linear = [](auto x){ return x; };
+  auto f_quadratic = [](auto x){ return x * x; };
+  auto f_cubic = [](auto x){ return x * x * x; };
+  auto f_sine = [](auto x){ return sin(x); };
+  auto f_runge = [](auto x){ return 1 / (1 + 25 * x * x); };
 
-  auto s = xemd::xspline::Spline<double>(X, Y);
+  std::vector<TestCase> tests = {
+    {x, f_linear, f_linear, "f(x) = x"},
+    {x, f_quadratic, f_quadratic, "f(x) = x^2"},
+    {x, f_cubic, f_cubic, "f(x) = x^3"},
+    {x, f_sine, f_sine, "f(x) = sin(x)"},
+    {x, f_runge, f_runge, "f(x) = 1 / (1 + 25x^2)"}
+  };
 
-  CHECK( ApproximatesTo(s(-11), 121, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( -9),  81, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( -6),  36, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( -5),  25, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( -3),   9, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s(  0),   0, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s(  3),   9, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s(  5),  25, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s(  6),  36, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s(  9),  81, FLOATING_POINT_ERROR_TOLERANCE) );
-  CHECK( ApproximatesTo(s( 11), 121, FLOATING_POINT_ERROR_TOLERANCE) );
+  for (const auto& test : tests) {
+    SECTION( test.label ) {
+      auto y = test.f(x);
+      auto s = xemd::xspline::Spline<double>(x, y);
+      for (double k = x[0]; k < x[x.size() - 1]; k += TEST_STEP) {
+        auto eval = s(k);
+        SECTION( fmt::format("f({}) = {} :: {}", k, test.g(k), eval) ) {
+          CHECK( ApproximatesTo(eval, test.g(k), CONFIDENCE) );
+        }
+      }
+    }
+  }
 }
