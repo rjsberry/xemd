@@ -1,0 +1,46 @@
+language: cpp
+dist: precise
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env: COMPILER=gcc GCC=4.9
+env:
+  global:
+    - MINICONDA_VERSION="latest"
+    - MINICONDA_OS="Linux-x86_64"
+before_install:
+  - |
+    if [[ "$COMPILER" == "gcc" ]]; then
+      export CXX=g++-$GCC CC=gcc-$GCC;
+    fi
+    if [[ "$COMPILER" == "clang" ]]; then
+      export CXX=clang++-$CLANG CC=clang-$CLANG;
+    fi
+install:
+  # Install miniconda
+  - wget "http://repo.continuum.io/miniconda/Miniconda3-$MINCONDA_VERSION-$MINCONDA_OS.sh" -O miniconda.sh;
+  - export CONDA_PREFIX=$HOME/miniconda
+  - bash miniconda.sh -b -p $CONDA_PREFIX
+  - export PATH="$CONDA_PREFIX/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  # Install dependencies with conda
+  - conda install gtest cmake -c conda-forge
+  - conda install openblas -c conda-forge
+  - conda install xtl xtensor xtensor-blas -c conda-forge
+  # Build the tests
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make
+script:
+  - cd test
+  - ./test_xemd
