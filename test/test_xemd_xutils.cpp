@@ -8,7 +8,6 @@
 //
 
 #include "gtest/gtest.h"
-
 #include "xtensor/xrandom.hpp"
 #include "xtensor/xtensor.hpp"
 

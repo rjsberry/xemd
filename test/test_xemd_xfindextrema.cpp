@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-
 #include "xtensor/xadapt.hpp"
 #include "xtensor/xrandom.hpp"
 #include "xtensor/xtensor.hpp"

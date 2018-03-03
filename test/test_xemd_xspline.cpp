@@ -12,9 +12,6 @@
 #include <string>
 
 #include "gtest/gtest.h"
-
-#include "fmt/format.h"
-
 #include "xtensor/xtensor.hpp"
 
 #include "xemd/xemd.hpp"
