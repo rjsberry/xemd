@@ -24,7 +24,7 @@ before_install:
     fi
 install:
   # Install miniconda
-  - wget "http://repo.continuum.io/miniconda/Miniconda3-$MINCONDA_VERSION-$MINCONDA_OS.sh" -O miniconda.sh;
+  - wget "http://repo.continuum.io/miniconda/Miniconda3-$MINICONDA_VERSION-$MINICONDA_OS.sh" -O miniconda.sh;
   - export CONDA_PREFIX=$HOME/miniconda
   - bash miniconda.sh -b -p $CONDA_PREFIX
   - export PATH="$CONDA_PREFIX/bin:$PATH"
