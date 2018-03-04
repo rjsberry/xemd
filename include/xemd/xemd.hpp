@@ -239,7 +239,8 @@ public:
     , y1(y[1]) {
   }
 
-  T operator() (T x) const {
+  T
+  operator() (T x) const {
     return xutils::Extrapolate(x0, y0, x1, y1, x);
   }
 
@@ -260,16 +261,17 @@ public:
     : coeffs(CalculateCoefficients(x, y)) {
   }
 
-  T operator() (T x) const {
+  T
+  operator() (T x) const {
     return coeffs.a*x*x + coeffs.b*x + coeffs.c;
   }
 
 private:
   const Coefficients coeffs;
 
-  static
-  Coefficients CalculateCoefficients(const xemd::array_type::tensor<T>& x,
-                                     const xemd::array_type::tensor<T>& y) {
+  static Coefficients
+  CalculateCoefficients(const xemd::array_type::tensor<T>& x,
+                        const xemd::array_type::tensor<T>& y) {
     // FIXME: Update to `xt::xtensorf<T, xt::shape<3, 3>>`
     xemd::array_type::array<T> vandermonde
       {{x[0] * x[0], x[0], 1},
@@ -285,32 +287,34 @@ private:
 template<typename T>
 class Spline : public Interpolator<T> {
 private:
-  struct SplineCoefficients {
+  struct Coefficients {
     xemd::array_type::tensor<T> a, b, c, d, x;
   };
 
 public:
   Spline(const xemd::array_type::tensor<T>& x,
          const xemd::array_type::tensor<T>& y) 
-      : coefficients_(CalculateSplineCoefficients(x, y)) {
+    : coeffs(CalculateCoefficients(x, y)) {
   }
 
-  T operator()(T x) const {
-    return EvaluateCoefficients_(x);
+  T
+  operator()(T x) const {
+    return EvaluateCoefficients(x);
   }
 
 private:
-  const SplineCoefficients coefficients_;
+  const Coefficients coeffs;
 
-  static SplineCoefficients
-  CalculateSplineCoefficients(const xemd::array_type::tensor<T>& x,
-                              const xemd::array_type::tensor<T>& y) {
+  static Coefficients
+  CalculateCoefficients(const xemd::array_type::tensor<T>& x,
+                        const xemd::array_type::tensor<T>& y) {
     auto N = x.size();
     auto h = xutils::Diff<T>(x);
 
     xemd::array_type::tensor<T> a = xt::zeros<T>({N - 2});
     xemd::array_type::tensor<T> b = xt::zeros<T>({N});
     xemd::array_type::tensor<T> g = xt::zeros<T>({N});
+
     for (std::size_t i = 0; i < N - 1; ++i) {
       b[i] = (y[i+1] - y[i]) / h[i];
     }
@@ -354,28 +358,30 @@ private:
     return {y, b, c, d, x};
   }
 
-  T EvaluateCoefficients_(T x) const {
+  T
+  EvaluateCoefficients(T x) const {
     T h;
-    std::size_t i = coefficients_.x.size() - 2;
-    for (; i < coefficients_.x.size() - 1; --i) {
-      h = x - coefficients_.x[i];
+    std::size_t i = coeffs.x.size() - 2;
+    for (; i < coeffs.x.size() - 1; --i) {
+      h = x - coeffs.x[i];
       if (h >= 0) {
         break;
       }
     }
-    auto y = coefficients_.d[i];
-    y = y * h + coefficients_.c[i];
-    y = y * h + coefficients_.b[i];
-    y = y * h + coefficients_.a[i];
+
+    auto y = coeffs.d[i];
+    y = y * h + coeffs.c[i];
+    y = y * h + coeffs.b[i];
+    y = y * h + coeffs.a[i];
 
     return y;
   }
 };
 
 template<typename T>
-std::unique_ptr<Interpolator<T>> CreateInterpolator(
-    const xemd::array_type::tensor<T>& x,
-    const xemd::array_type::tensor<T>& y) {
+std::unique_ptr<Interpolator<T>>
+CreateInterpolator(const xemd::array_type::tensor<T>& x,
+                   const xemd::array_type::tensor<T>& y) {
   assert(x.size() == y.size());
   assert(x.size() > 1);
 
