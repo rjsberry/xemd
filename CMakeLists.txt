@@ -16,7 +16,6 @@ set(XEMD_HEADER ${XEMD_INCLUDE_DIR}/xemd/xemd.hpp)
 project(xemd)
 
 find_package(xtensor REQUIRED)
-message(STATUS "Found xtensor: ${xtensor_INCLUDE_DIRS}/xtensor")
 find_package(xtensor-blas REQUIRED)
 
 enable_testing(true)

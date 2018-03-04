@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <type_traits>
 #include <vector>
 
@@ -120,15 +121,6 @@ Extrapolate(T x0, T y0, T x1, T y1, T x) {
 }
 
 template<typename T> inline
-bool
-IsMonotonic(const xemd::array_type::tensor<T>& x) {
-  if (xt::all(Diff<T>(x) >= 0) || xt::all(Diff<T>(x) <= 0)) {
-    return true;
-  }
-  return false;
-}
-
-template<typename T> inline
 std::size_t
 NumImfs(const xemd::array_type::tensor<T>& x) {
   auto N = x.size();
@@ -144,6 +136,9 @@ NumImfs(const xemd::array_type::tensor<T>& x) {
 namespace xfindextrema {
 
 struct Extrema {
+  Extrema(void) {
+  }
+
   Extrema(const std::vector<std::size_t>& maxima_,
           const std::vector<std::size_t>& minima_,
           std::size_t zero_crossings_) {
@@ -225,85 +220,141 @@ FindExtrema(const xemd::array_type::tensor<T>& x) {
 
 }  // namespace xfindpeaks
 
-namespace xspline {
+namespace xinterpolate {
 
 template<typename T>
-struct SplineCoefficients {
-  xemd::array_type::tensor<T> a, b, c, d, x;
+class Interpolator {
+public:
+  virtual T operator() (T x) const = 0;
 };
 
 template<typename T>
-SplineCoefficients<T>
-CalculateSplineCoefficients(const xemd::array_type::tensor<T>& x,
-                            const xemd::array_type::tensor<T>& y) {
-  auto N = x.size();
-  auto h = xutils::Diff<T>(x);
-
-  xemd::array_type::tensor<T> a = xt::zeros<T>({N - 2});
-  xemd::array_type::tensor<T> b = xt::zeros<T>({N});
-  xemd::array_type::tensor<T> g = xt::zeros<T>({N});
-  for (std::size_t i = 0; i < N - 1; ++i) {
-    b[i] = (y[i+1] - y[i]) / h[i];
-  }
-  for (std::size_t i = 0; i < N - 2; ++i) {
-    a[i] = 2 * (h[i+1] + h[i]);  // System matrix diagonal.
-    g[i+1] = b[i+1] - b[i];
+class Linear : public Interpolator<T> {
+public:
+  Linear(const xemd::array_type::tensor<T>& x,
+         const xemd::array_type::tensor<T>& y)
+    : x0(x[0])
+    , y0(y[0])
+    , x1(x[1])
+    , y1(y[1]) {
   }
 
-  // Construct the tri-diagonal matrix for the "periodic" boundary condition.
-  auto diag =
-    // Diagonal
-    xt::diag(a) +
-    // Off-diagonal (upper)
-    xt::diag(xt::view(h, xt::range(0, h.size() - 2)), 1) +
-    // Off-diagonal (lower)
-    xt::diag(xt::view(h, xt::range(0, h.size() - 2)), -1) +
-    // Corner (upper right)
-    xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), a.size() - 1) +
-    // Corner (lower left)
-    xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), -(a.size() - 1))
-  ;
-  // Solve the constructed tridiagonal system matrix with `g` for `c`.
-  xemd::array_type::tensor<T> c = xt::concatenate(xtuple(
-    xt::zeros<T>({1}),
-    xt::linalg::solve(diag, xt::view(g, xt::range(1, g.size() - 1))),
-    xt::zeros<T>({1})
-  ));
-
-  xemd::array_type::tensor<T> d = xt::zeros<T>({N});
-  for (std::size_t i = 0; i < N - 1; ++i) {
-    if (i < N - 2) {
-      d[i] = (c[i+1] - c[i]) / h[i];
-      b[i] -= h[i] * (c[i+1] + 2 * c[i]);
-    } else {
-      d[i] = -(c[i] / h[i]);
-      b[i] -= 2 * c[i] * h[i];
-    }
-    c[i] *= 3.;
+  T operator() (T x) const {
+    return xutils::Extrapolate(x0, y0, x1, y1, x);
   }
 
-  return {y, b, c, d, x};
-}
+private:
+  T x0, y0, x1, y1;
+};
 
 template<typename T>
-class Spline {
+class Polynomial : public Interpolator<T> {
+private:
+  struct Coefficients {
+    T a, b, c;
+  };
+
+public:
+  Polynomial(const xemd::array_type::tensor<T>& x,
+             const xemd::array_type::tensor<T>& y) 
+    : coeffs(CalculateCoefficients(x, y)) {
+  }
+
+  T operator() (T x) const {
+    return coeffs.a*x*x + coeffs.b*x + coeffs.c;
+  }
+
+private:
+  const Coefficients coeffs;
+
+  static
+  Coefficients CalculateCoefficients(const xemd::array_type::tensor<T>& x,
+                                     const xemd::array_type::tensor<T>& y) {
+    // FIXME: Update to `xt::xtensorf<T, xt::shape<3, 3>>`
+    xemd::array_type::array<T> vandermonde
+      {{x[0] * x[0], x[0], 1},
+       {x[1] * x[1], x[1], 1},
+       {x[2] * x[2], x[2], 1}};
+
+    auto raw_coeffs = xt::linalg::solve(vandermonde, y);
+
+    return {raw_coeffs[0], raw_coeffs[1], raw_coeffs[2]};
+  }
+};
+
+template<typename T>
+class Spline : public Interpolator<T> {
+private:
+  struct SplineCoefficients {
+    xemd::array_type::tensor<T> a, b, c, d, x;
+  };
+
 public:
   Spline(const xemd::array_type::tensor<T>& x,
          const xemd::array_type::tensor<T>& y) 
-      : coefficients_(CalculateSplineCoefficients<T>(x, y)) {
-    assert(x.size() == y.size());
+      : coefficients_(CalculateSplineCoefficients(x, y)) {
   }
 
-  T
-  operator()(T x) const {
+  T operator()(T x) const {
     return EvaluateCoefficients_(x);
   }
 
 private:
-  const SplineCoefficients<T> coefficients_;
+  const SplineCoefficients coefficients_;
 
-  T
-  EvaluateCoefficients_(T x) const {
+  static SplineCoefficients
+  CalculateSplineCoefficients(const xemd::array_type::tensor<T>& x,
+                              const xemd::array_type::tensor<T>& y) {
+    auto N = x.size();
+    auto h = xutils::Diff<T>(x);
+
+    xemd::array_type::tensor<T> a = xt::zeros<T>({N - 2});
+    xemd::array_type::tensor<T> b = xt::zeros<T>({N});
+    xemd::array_type::tensor<T> g = xt::zeros<T>({N});
+    for (std::size_t i = 0; i < N - 1; ++i) {
+      b[i] = (y[i+1] - y[i]) / h[i];
+    }
+    for (std::size_t i = 0; i < N - 2; ++i) {
+      a[i] = 2 * (h[i+1] + h[i]);  // System matrix diagonal.
+      g[i+1] = b[i+1] - b[i];
+    }
+
+    // Construct the tri-diagonal matrix for the "periodic" boundary condition.
+    auto diag =
+      // Diagonal
+      xt::diag(a) +
+      // Off-diagonal (upper)
+      xt::diag(xt::view(h, xt::range(0, h.size() - 2)), 1) +
+      // Off-diagonal (lower)
+      xt::diag(xt::view(h, xt::range(0, h.size() - 2)), -1) +
+      // Corner (upper right)
+      xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), a.size() - 1) +
+      // Corner (lower left)
+      xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), -(a.size() - 1))
+    ;
+    // Solve the constructed tridiagonal system matrix with `g` for `c`.
+    xemd::array_type::tensor<T> c = xt::concatenate(xtuple(
+      xt::zeros<T>({1}),
+      xt::linalg::solve(diag, xt::view(g, xt::range(1, g.size() - 1))),
+      xt::zeros<T>({1})
+    ));
+
+    xemd::array_type::tensor<T> d = xt::zeros<T>({N});
+    for (std::size_t i = 0; i < N - 1; ++i) {
+      if (i < N - 2) {
+        d[i] = (c[i+1] - c[i]) / h[i];
+        b[i] -= h[i] * (c[i+1] + 2 * c[i]);
+      } else {
+        d[i] = -(c[i] / h[i]);
+        b[i] -= 2 * c[i] * h[i];
+      }
+      c[i] *= 3.;
+    }
+
+    return {y, b, c, d, x};
+  }
+
+  T EvaluateCoefficients_(T x) const {
     T h;
     std::size_t i = coefficients_.x.size() - 2;
     for (; i < coefficients_.x.size() - 1; --i) {
@@ -321,7 +372,28 @@ private:
   }
 };
 
-}  // namespace xspline
+template<typename T>
+std::unique_ptr<Interpolator<T>> CreateInterpolator(
+    const xemd::array_type::tensor<T>& x,
+    const xemd::array_type::tensor<T>& y) {
+  assert(x.size() == y.size());
+  assert(x.size() > 1);
+
+  std::unique_ptr<Interpolator<T>> ptr;
+  switch (x.size()) {
+  case 2:
+    ptr = std::make_unique<Linear<T>>(x, y);
+    return ptr;
+  case 3:
+    ptr = std::make_unique<Polynomial<T>>(x, y);
+    return ptr;
+  default:
+    ptr = std::make_unique<Spline<T>>(x, y);
+    return ptr;
+  }
+}
+
+}  // namespace xinterpolate
 
 template<typename T>
 void

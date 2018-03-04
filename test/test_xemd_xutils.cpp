@@ -59,24 +59,6 @@ TEST(xutils, linear_extrapolation) {
   }
 }
 
-TEST(xutils, monotonic) {
-  auto constant = xt::ones<int>({ARRAY_LENGTH});
-  ASSERT_TRUE(xemd::xutils::IsMonotonic<int>(constant));
-
-  auto linear = xt::arange<int>(-static_cast<int>(ARRAY_LENGTH)/2,
-                                static_cast<int>(ARRAY_LENGTH)/2);
-  ASSERT_TRUE(xemd::xutils::IsMonotonic<int>(linear));
-
-  auto noise = xt::random::randn<double>({ARRAY_LENGTH});
-  ASSERT_FALSE(xemd::xutils::IsMonotonic<double>(noise));
-
-  auto quadratic = linear * linear;
-  ASSERT_FALSE(xemd::xutils::IsMonotonic<int>(quadratic));
-
-  auto cubic = linear * linear * linear;
-  ASSERT_TRUE(xemd::xutils::IsMonotonic<int>(cubic));
-}
-
 TEST(xutils, num_imfs) {
   struct TestCase {
     std::size_t input_tensor_size;

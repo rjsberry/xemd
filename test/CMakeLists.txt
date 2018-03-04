@@ -36,8 +36,8 @@ include_directories(${GTEST_INCLUDE_DIRS})
 
 set(XEMD_TESTS
     main.cpp
+    test_xemd_interpolation.cpp
     test_xemd_xfindextrema.cpp
-    test_xemd_xspline.cpp
     test_xemd_xutils.cpp)
 
 set(XEMD_TARGET test_xemd)
