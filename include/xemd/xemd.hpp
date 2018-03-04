@@ -19,6 +19,7 @@
 
 #include <xtensor/xadapt.hpp>
 #include <xtensor/xview.hpp>
+#include <xtensor/xindex_view.hpp>
 
 #include <xtensor-blas/xlinalg.hpp>
 
@@ -400,6 +401,81 @@ CreateInterpolator(const xemd::array_type::tensor<T>& x,
 }
 
 }  // namespace xinterpolate
+
+template<typename T>
+class IMF {
+public:
+  IMF(xemd::array_type::tensor<T>* x)
+    : xsignal(x) {
+  }
+
+  void
+  Decompose(unsigned int s_number, std::size_t maximum_iterations) {
+    unsigned int s_count = 0;
+    auto extrema = xfindextrema::Extrema();
+
+    for (std::size_t i = 0; i < maximum_iterations; ++i) {
+      auto previous_extrema = extrema;
+      extrema = xfindextrema::FindExtrema(*xsignal);
+
+      if (StopSifting(s_number, &s_count, extrema, previous_extrema)) {
+        break;
+      }
+
+      xemd::array_type::tensor<T> maxima_y = xt::index_view(*xsignal, extrema.maxima);
+      auto interp_maxima =
+        xinterpolate::CreateInterpolator<T>(extrema.maxima, maxima_y);
+
+      xemd::array_type::tensor<T> minima_y = xt::index_view(*xsignal, extrema.minima);
+      auto interp_minima =
+        xinterpolate::CreateInterpolator<T>(extrema.minima, minima_y);
+
+      for (std::size_t j = 0; j < xsignal->size(); ++j) {
+        (*xsignal)[j] -= 0.5 * ((*interp_maxima)(j) - (*interp_minima)(j));
+      }
+    }
+  }
+
+  xemd::array_type::tensor<T>
+  Extract(void) {
+    return *xsignal;
+  }
+
+  bool
+  IsMonotonic(void) {
+    if (xt::all(xutils::Diff<T>(*xsignal) >= 0) ||
+        xt::all(xutils::Diff<T>(*xsignal) <= 0)) {
+      return true;
+    }
+    return false;
+  }
+
+private:
+  xemd::array_type::tensor<T>* xsignal;
+
+  bool
+  StopSifting(unsigned int s_number,
+              unsigned int *s_count,
+              const xfindextrema::Extrema& this_extrema,
+              const xfindextrema::Extrema& prev_extrema) {
+    auto delta_max =
+      std::abs(this_extrema.maxima.size() - prev_extrema.maxima.size());
+    auto delta_min =
+      std::abs(this_extrema.minima.size() - prev_extrema.minima.size());
+    auto delta_zc =
+      std::abs(this_extrema.zero_crossings - prev_extrema.zero_crossings);
+
+    if (delta_max + delta_min + delta_zc <= 1) {
+      if (++(*s_count) >= s_number) {
+        return true;
+      }
+    } else {
+      *s_count = 0;
+    }
+
+    return false;
+  }
+};
 
 template<typename T>
 void
