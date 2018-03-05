@@ -23,19 +23,17 @@ const std::size_t TENSOR_LENGTH = 100;
 
 TEST(imf, extract_internal_signal) {
   xt::xtensor<double, 1> x = xt::random::randn<double>({TENSOR_LENGTH});
-  auto imf = xemd::IMF<double>(&x);
+  auto imf = xemd::IMF<double>(x);
 
   ASSERT_EQ(imf.Extract(), x);
 }
 
 TEST(imf, decompose) {
   xt::xtensor<double, 1> x = xt::random::randn<double>({TENSOR_LENGTH});
-  auto x_copy = x;
-  auto imf = xemd::IMF<double>(&x);
+  auto imf = xemd::IMF<double>(x);
   imf.Decompose(1, 1000);
 
-  ASSERT_NE(imf.Extract(), x_copy);
-  ASSERT_EQ(imf.Extract(), x); 
+  ASSERT_NE(imf.Extract(), x);
 }
 
 TEST(imf, monotonic_signal_check) {
@@ -69,7 +67,7 @@ TEST(imf, monotonic_signal_check) {
   };
 
   for (auto& test : tests) {
-    auto imf = xemd::IMF<double>(&test.x);
+    auto imf = xemd::IMF<double>(test.x);
     ASSERT_EQ(imf.IsMonotonic(), test.is_monotonic);
   }
 }

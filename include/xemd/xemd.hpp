@@ -405,7 +405,7 @@ CreateInterpolator(const xemd::array_type::tensor<T>& x,
 template<typename T>
 class IMF {
 public:
-  IMF(xemd::array_type::tensor<T>* x)
+  IMF(const xemd::array_type::tensor<T>& x)
     : xsignal(x) {
   }
 
@@ -416,42 +416,52 @@ public:
 
     for (std::size_t i = 0; i < maximum_iterations; ++i) {
       auto previous_extrema = extrema;
-      extrema = xfindextrema::FindExtrema(*xsignal);
+      extrema = xfindextrema::FindExtrema(xsignal);
 
       if (StopSifting(s_number, &s_count, extrema, previous_extrema)) {
         break;
       }
 
-      xemd::array_type::tensor<T> maxima_y = xt::index_view(*xsignal, extrema.maxima);
+      xemd::array_type::tensor<std::size_t> maxima_x = xt::concatenate(xtuple(
+        xt::zeros<T>({1}),
+        extrema.maxima,
+        xt::view(xsignal, xt::range(xsignal.size() - 2, xsignal.size() - 1))
+      ));
+      xemd::array_type::tensor<std::size_t> minima_x = xt::concatenate(xtuple(
+        xt::zeros<T>({1}),
+        extrema.minima,
+        xt::view(xsignal, xt::range(xsignal.size() - 2, xsignal.size() - 1))
+      ));
+
+      xemd::array_type::tensor<T> maxima_y = xt::index_view(xsignal, maxima_x);
       auto interp_maxima =
-        xinterpolate::CreateInterpolator<T>(extrema.maxima, maxima_y);
-
-      xemd::array_type::tensor<T> minima_y = xt::index_view(*xsignal, extrema.minima);
+        xinterpolate::CreateInterpolator<T>(maxima_x, maxima_y);
+      xemd::array_type::tensor<T> minima_y = xt::index_view(xsignal, minima_x);
       auto interp_minima =
-        xinterpolate::CreateInterpolator<T>(extrema.minima, minima_y);
+        xinterpolate::CreateInterpolator<T>(minima_x, minima_y);
 
-      for (std::size_t j = 0; j < xsignal->size(); ++j) {
-        (*xsignal)[j] -= 0.5 * ((*interp_maxima)(j) - (*interp_minima)(j));
+      for (std::size_t j = 0; j < xsignal.size(); ++j) {
+        xsignal[j] -= 0.5 * ((*interp_maxima)(j) - (*interp_minima)(j));
       }
     }
   }
 
   xemd::array_type::tensor<T>
   Extract(void) {
-    return *xsignal;
+    return xsignal;
   }
 
   bool
   IsMonotonic(void) {
-    if (xt::all(xutils::Diff<T>(*xsignal) >= 0) ||
-        xt::all(xutils::Diff<T>(*xsignal) <= 0)) {
+    if (xt::all(xutils::Diff<T>(xsignal) >= 0) ||
+        xt::all(xutils::Diff<T>(xsignal) <= 0)) {
       return true;
     }
     return false;
   }
 
 private:
-  xemd::array_type::tensor<T>* xsignal;
+  xemd::array_type::tensor<T> xsignal;
 
   bool
   StopSifting(unsigned int s_number,
