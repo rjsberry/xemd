@@ -12,6 +12,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <type_traits>
@@ -129,6 +130,32 @@ NumImfs(const xemd::array_type::tensor<T>& x) {
     return 1;
   } else {
     return std::floor(std::log2(N));
+  }
+}
+
+template<typename T> inline
+void
+CorrectEndpoints(const xemd::array_type::tensor<T>& x,
+                 xemd::array_type::tensor<T>& y,
+                 const std::function<bool (T, T)>& comparator) {
+  assert(x.size() == y.size());
+
+  if (x.size() <= 2) {
+    return;
+  }
+
+  auto lhs_candidate = Extrapolate(
+    x[1], y[1], x[2], y[2], x[0]
+  );
+  auto rhs_candidate = Extrapolate(
+    x[x.size()-3], y[y.size()-3], x[x.size()-2], y[y.size()-2], x[x.size()-1]
+  );
+
+  if (comparator(lhs_candidate, y[0])) {
+    y[0] = lhs_candidate;
+  }
+  if (comparator(rhs_candidate, y[y.size()-1])) {
+    y[y.size()-1] = rhs_candidate;
   }
 }
 
@@ -427,16 +454,18 @@ public:
         extrema.maxima,
         xt::view(xsignal, xt::range(xsignal.size() - 2, xsignal.size() - 1))
       ));
+      xemd::array_type::tensor<T> maxima_y = xt::index_view(xsignal, maxima_x);
+      xutils::CorrectEndpoints<T>(maxima_x, maxima_y, [](T x, T y){ return x > y; });
+      auto interp_maxima =
+        xinterpolate::CreateInterpolator<T>(maxima_x, maxima_y);
+
       xemd::array_type::tensor<std::size_t> minima_x = xt::concatenate(xtuple(
         xt::zeros<T>({1}),
         extrema.minima,
         xt::view(xsignal, xt::range(xsignal.size() - 2, xsignal.size() - 1))
       ));
-
-      xemd::array_type::tensor<T> maxima_y = xt::index_view(xsignal, maxima_x);
-      auto interp_maxima =
-        xinterpolate::CreateInterpolator<T>(maxima_x, maxima_y);
       xemd::array_type::tensor<T> minima_y = xt::index_view(xsignal, minima_x);
+      xutils::CorrectEndpoints<T>(minima_x, minima_y, [](T x, T y){ return x < y; });
       auto interp_minima =
         xinterpolate::CreateInterpolator<T>(minima_x, minima_y);
 
