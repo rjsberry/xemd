@@ -9,8 +9,8 @@
 
 find_package(xtensor REQUIRED CONFIG)
 set(XTENSOR_INCLUDE_DIR ${xtensor_INCLUDE_DIRS})
-find_package(xtensor-blas REQUIRED CONFIG)
-set(XTENSOR_BLAS_INCLUDE_DIR ${xblas_INCLUDE_DIRS})
+find_package(xtensor-interpolate REQUIRED CONFIG)
+set(XTENSOR_INTERPOLATE_LIB ${xtensor_interpolate_LIBRARY})
 
 configure_file(GTest.cmake.in googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -26,18 +26,16 @@ set(GTEST_BOTH_LIBRARIES gtest_main gtest)
 
 find_package(Threads)
 find_package(xtensor REQUIRED)
-find_package(xtensor-blas REQUIRED)
-find_package(OpenBLAS REQUIRED)
 
 include_directories(${XEMD_INCLUDE_DIR})
 include_directories(${XTENSOR_INCLUDE_DIR})
-include_directories(${XTENSOR_BLAS_INCLUDE_DIR})
+include_directories(${XTENSOR_INTERPOLATE_INCLUDE_DIR})
 include_directories(${GTEST_INCLUDE_DIRS})
 
 set(XEMD_TESTS
     main.cpp
+    test_xemd_emd.cpp
     test_xemd_imf.cpp
-    test_xemd_interpolation.cpp
     test_xemd_xfindextrema.cpp
     test_xemd_xutils.cpp)
 
@@ -47,9 +45,9 @@ add_executable(${XEMD_TARGET} ${XEMD_TESTS} ${XEMD_HEADER})
 add_dependencies(${XEMD_TARGET} gtest_main)
 
 target_link_libraries(${XEMD_TARGET}
-    ${OpenBLAS_LIBRARIES}
     ${GTEST_BOTH_LIBRARIES}
+    ${XTENSOR_INTERPOLATE_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
-)
+   )
 
 add_custom_target(xtest COMMAND test_xemd)

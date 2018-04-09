@@ -18,11 +18,16 @@
 #include <type_traits>
 #include <vector>
 
+#include <unistd.h>
+
 #include <xtensor/xadapt.hpp>
 #include <xtensor/xview.hpp>
 #include <xtensor/xindex_view.hpp>
+#include <xtensor/xio.hpp>
 
 #include <xtensor-blas/xlinalg.hpp>
+
+#include <xtensor-interpolate/xinterpolate.hpp>
 
 #if defined(XEMD_USE_XTENSOR_JULIA)
   #include <xtensor-julia/jltensor.hpp>
@@ -120,6 +125,16 @@ template<typename T> inline
 T
 Extrapolate(T x0, T y0, T x1, T y1, T x) {
   return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+}
+
+template<typename T> inline
+void
+InsertRow(xemd::array_type::array<T>& X,
+          std::size_t row,
+          const xemd::array_type::tensor<T>& x) {
+  for (std::size_t col = 0; col < X.shape()[1]; ++col) {
+    X(row, col) = x(col);
+  }
 }
 
 template<typename T> inline
@@ -248,192 +263,11 @@ FindExtrema(const xemd::array_type::tensor<T>& x) {
 
 }  // namespace xfindpeaks
 
-namespace xinterpolate {
-
-template<typename T>
-class Interpolator {
-public:
-  virtual T operator() (T x) const = 0;
-};
-
-template<typename T>
-class Linear : public Interpolator<T> {
-public:
-  Linear(const xemd::array_type::tensor<T>& x,
-         const xemd::array_type::tensor<T>& y)
-    : x0(x[0])
-    , y0(y[0])
-    , x1(x[1])
-    , y1(y[1]) {
-  }
-
-  T
-  operator() (T x) const {
-    return xutils::Extrapolate(x0, y0, x1, y1, x);
-  }
-
-private:
-  T x0, y0, x1, y1;
-};
-
-template<typename T>
-class Polynomial : public Interpolator<T> {
-private:
-  struct Coefficients {
-    T a, b, c;
-  };
-
-public:
-  Polynomial(const xemd::array_type::tensor<T>& x,
-             const xemd::array_type::tensor<T>& y) 
-    : coeffs(CalculateCoefficients(x, y)) {
-  }
-
-  T
-  operator() (T x) const {
-    return coeffs.a*x*x + coeffs.b*x + coeffs.c;
-  }
-
-private:
-  const Coefficients coeffs;
-
-  static Coefficients
-  CalculateCoefficients(const xemd::array_type::tensor<T>& x,
-                        const xemd::array_type::tensor<T>& y) {
-    // FIXME: Update to `xt::xtensorf<T, xt::shape<3, 3>>`
-    xemd::array_type::array<T> vandermonde
-      {{x[0] * x[0], x[0], 1},
-       {x[1] * x[1], x[1], 1},
-       {x[2] * x[2], x[2], 1}};
-
-    auto raw_coeffs = xt::linalg::solve(vandermonde, y);
-
-    return {raw_coeffs[0], raw_coeffs[1], raw_coeffs[2]};
-  }
-};
-
-template<typename T>
-class Spline : public Interpolator<T> {
-private:
-  struct Coefficients {
-    xemd::array_type::tensor<T> a, b, c, d, x;
-  };
-
-public:
-  Spline(const xemd::array_type::tensor<T>& x,
-         const xemd::array_type::tensor<T>& y) 
-    : coeffs(CalculateCoefficients(x, y)) {
-  }
-
-  T
-  operator()(T x) const {
-    return EvaluateCoefficients(x);
-  }
-
-private:
-  const Coefficients coeffs;
-
-  static Coefficients
-  CalculateCoefficients(const xemd::array_type::tensor<T>& x,
-                        const xemd::array_type::tensor<T>& y) {
-    auto N = x.size();
-    auto h = xutils::Diff<T>(x);
-
-    xemd::array_type::tensor<T> a = xt::zeros<T>({N - 2});
-    xemd::array_type::tensor<T> b = xt::zeros<T>({N});
-    xemd::array_type::tensor<T> g = xt::zeros<T>({N});
-
-    for (std::size_t i = 0; i < N - 1; ++i) {
-      b[i] = (y[i+1] - y[i]) / h[i];
-    }
-    for (std::size_t i = 0; i < N - 2; ++i) {
-      a[i] = 2 * (h[i+1] + h[i]);  // System matrix diagonal.
-      g[i+1] = b[i+1] - b[i];
-    }
-
-    // Construct the tri-diagonal matrix for the "periodic" boundary condition.
-    auto diag =
-      // Diagonal
-      xt::diag(a) +
-      // Off-diagonal (upper)
-      xt::diag(xt::view(h, xt::range(0, h.size() - 2)), 1) +
-      // Off-diagonal (lower)
-      xt::diag(xt::view(h, xt::range(0, h.size() - 2)), -1) +
-      // Corner (upper right)
-      xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), a.size() - 1) +
-      // Corner (lower left)
-      xt::diag(xt::view(h, xt::range(h.size() - 2, h.size() - 1)), -(a.size() - 1))
-    ;
-    // Solve the constructed tridiagonal system matrix with `g` for `c`.
-    xemd::array_type::tensor<T> c = xt::concatenate(xtuple(
-      xt::zeros<T>({1}),
-      xt::linalg::solve(diag, xt::view(g, xt::range(1, g.size() - 1))),
-      xt::zeros<T>({1})
-    ));
-
-    xemd::array_type::tensor<T> d = xt::zeros<T>({N});
-    for (std::size_t i = 0; i < N - 1; ++i) {
-      if (i < N - 2) {
-        d[i] = (c[i+1] - c[i]) / h[i];
-        b[i] -= h[i] * (c[i+1] + 2 * c[i]);
-      } else {
-        d[i] = -(c[i] / h[i]);
-        b[i] -= 2 * c[i] * h[i];
-      }
-      c[i] *= 3.;
-    }
-
-    return {y, b, c, d, x};
-  }
-
-  T
-  EvaluateCoefficients(T x) const {
-    T h;
-    std::size_t i = coeffs.x.size() - 2;
-    for (; i < coeffs.x.size() - 1; --i) {
-      h = x - coeffs.x[i];
-      if (h >= 0) {
-        break;
-      }
-    }
-
-    auto y = coeffs.d[i];
-    y = y * h + coeffs.c[i];
-    y = y * h + coeffs.b[i];
-    y = y * h + coeffs.a[i];
-
-    return y;
-  }
-};
-
-template<typename T>
-std::unique_ptr<Interpolator<T>>
-CreateInterpolator(const xemd::array_type::tensor<T>& x,
-                   const xemd::array_type::tensor<T>& y) {
-  assert(x.size() == y.size());
-  assert(x.size() > 1);
-
-  std::unique_ptr<Interpolator<T>> ptr;
-  switch (x.size()) {
-  case 2:
-    ptr = std::make_unique<Linear<T>>(x, y);
-    return ptr;
-  case 3:
-    ptr = std::make_unique<Polynomial<T>>(x, y);
-    return ptr;
-  default:
-    ptr = std::make_unique<Spline<T>>(x, y);
-    return ptr;
-  }
-}
-
-}  // namespace xinterpolate
-
 template<typename T>
 class IMF {
 public:
   IMF(const xemd::array_type::tensor<T>& x)
-    : xsignal(x) {
+    : xsignal(x), xsignal_x(xt::arange<double>(x.size())) {
   }
 
   void
@@ -449,29 +283,61 @@ public:
         break;
       }
 
+      // Interpolate envelope over signal maxima.
+
       xemd::array_type::tensor<std::size_t> maxima_x = xt::concatenate(xtuple(
-        xt::zeros<T>({1}),
+        xt::zeros<double>({ 1 }),
         extrema.maxima,
         xt::view(xsignal, xt::range(xsignal.size() - 2, xsignal.size() - 1))
       ));
       xemd::array_type::tensor<T> maxima_y = xt::index_view(xsignal, maxima_x);
+
       xutils::CorrectEndpoints<T>(maxima_x, maxima_y, [](T x, T y){ return x > y; });
-      auto interp_maxima =
-        xinterpolate::CreateInterpolator<T>(maxima_x, maxima_y);
+
+      auto maxima_k = 3;
+      if (maxima_x.size() == 2) {
+        maxima_k = 1;
+      } else if (maxima_x.size() == 3) {
+        maxima_k = 2;
+      }
+
+      auto maxima_tck = xt::interpolate::splrep(
+        static_cast<xemd::array_type::tensor<double>>(maxima_x),
+        maxima_y,
+        maxima_k
+      );
+
+      xt::xtensor<double, 1> maxima_spline =
+        xt::interpolate::splev(xsignal_x, maxima_tck);
+
+      // Interpolate envelope over signal minima.
 
       xemd::array_type::tensor<std::size_t> minima_x = xt::concatenate(xtuple(
-        xt::zeros<T>({1}),
+        xt::zeros<double>({ 1 }),
         extrema.minima,
         xt::view(xsignal, xt::range(xsignal.size() - 2, xsignal.size() - 1))
       ));
       xemd::array_type::tensor<T> minima_y = xt::index_view(xsignal, minima_x);
-      xutils::CorrectEndpoints<T>(minima_x, minima_y, [](T x, T y){ return x < y; });
-      auto interp_minima =
-        xinterpolate::CreateInterpolator<T>(minima_x, minima_y);
 
-      for (std::size_t j = 0; j < xsignal.size(); ++j) {
-        xsignal[j] -= 0.5 * ((*interp_maxima)(j) - (*interp_minima)(j));
+      xutils::CorrectEndpoints<T>(minima_x, minima_y, [](T x, T y){ return x < y; });
+
+      auto minima_k = 1;
+      if (minima_x.size() == 2) {
+        minima_k = 1;
+      } else if (minima_x.size() == 3) {
+        minima_k = 2;
       }
+
+      auto minima_tck = xt::interpolate::splrep(
+        static_cast<xemd::array_type::tensor<double>>(minima_x),
+        minima_y,
+        minima_k
+      );
+
+      xt::xtensor<double, 1> minima_spline =
+        xt::interpolate::splev(xsignal_x, minima_tck);
+
+      xsignal -= 0.5 * (maxima_spline + minima_spline);
     }
   }
 
@@ -490,7 +356,8 @@ public:
   }
 
 private:
-  xemd::array_type::tensor<T> xsignal;
+  xemd::array_type::tensor<T>       xsignal;
+  const xemd::array_type::tensor<T> xsignal_x;
 
   bool
   StopSifting(unsigned int s_number,
@@ -518,8 +385,29 @@ private:
 
 template<typename T>
 void
-emd(const xemd::array_type::tensor<T>& xin) {
-  std::cout << "CORE: `xemd::emd` called" << std::endl;
+emd(const xemd::array_type::tensor<T>& xin,
+    unsigned int s_number,
+    std::size_t max_siftings,
+    xemd::array_type::array<T>& imfs) {
+  auto N = xin.size();
+  auto M = xutils::NumImfs<T>(xin);
+
+  assert(imfs.shape()[0] >= M);
+  assert(imfs.shape()[1] == N);
+
+  auto residual = xin;
+  for (std::size_t i = 0; i < M; ++i) {
+    auto imf = IMF<T>(residual);
+
+    if (imf.IsMonotonic()) {
+      xutils::InsertRow(imfs, i, imf.Extract());
+      break;
+    }
+
+    imf.Decompose(s_number, max_siftings);
+    xutils::InsertRow(imfs, i, imf.Extract());
+    residual -= imf.Extract();
+  }
 }
 
 template<typename T>

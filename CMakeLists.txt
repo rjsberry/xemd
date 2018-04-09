@@ -16,7 +16,7 @@ set(XEMD_HEADER ${XEMD_INCLUDE_DIR}/xemd/xemd.hpp)
 project(xemd)
 
 find_package(xtensor REQUIRED)
-find_package(xtensor-blas REQUIRED)
+find_package(xtensor-interpolate REQUIRED)
 
 enable_testing(true)
 add_subdirectory(test)
